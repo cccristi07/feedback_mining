@@ -17,6 +17,7 @@ import gensim
 csv_path = 'opinion_data.csv'
 
 df = pd.read_csv(csv_path)
+df = df.replace(np.nan, '', regex=True)
 no_studs = len(df)
 specs = ["B1", "B2", "B3"]
 
@@ -65,17 +66,36 @@ for spec in specs:
     tokenizer = RegexpTokenizer(r'\w+')
     cls_words = tokenizer.tokenize(" ".join(cls_data))
     cls_words = [w for w in cls_words if w not in rom_sw]
-    cv = CountVectorizer(min_df=2)
+    cv = CountVectorizer(min_df=1)
+    scor = cv.fit_transform(cls_words).toarray()
+    scor = scor.sum(axis=0) # obtinem cele mai importante coloane
+    scor = list(zip(scor, cv.get_feature_names()))
+    scor = sorted(scor, key=lambda x: x[0], reverse=True)
+    classes[spec] = [cls for (_, cls) in scor[:3]]
+    print("La specializarea {} materiile cu probleme au fost {}".format(spec, classes[spec]))
+
+# abuse for each direction
+abuse = {}
+for spec in specs:
+    abuse_data = list(df[df.Dir == spec].Abuse)
+    abuse_data = [ad for ad in abuse_data if 'nu' not in ad.lower()]
+    abuse[spec] = len(abuse_data)
+    proc = abuse[spec] / studs_spec[spec] * 100
+    print("{0:.2f}% dintre studentii de la {1} raporteaza abuzuri ale profesorilor".format(proc, spec))
+
+# bad profs for each direction
+profs = {}
+for spec in specs:
+    prof_data = list(df[df.Dir == spec].Prof)
+    tokenizer = RegexpTokenizer(r'\w+')
+    cls_words = tokenizer.tokenize(" ".join(prof_data))
+    cls_words = [w for w in cls_words if w not in rom_sw]
+    cv = CountVectorizer()
     scor = cv.fit_transform(cls_words).toarray()
     scor = scor.sum(axis=0) # obtinem cele mai importante coloane
     scor = list(zip(scor, cv.get_feature_names()))
     scor = sorted(scor, key=lambda x: x[0], reverse=True)
     print(scor)
-
-# abuse for each direction
-
-
-# bad profs for each direction
 
 # what workload did the directions consider
 
