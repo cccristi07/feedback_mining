@@ -10,6 +10,10 @@ from nltk import word_tokenize
 from wordcloud import WordCloud
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE, SpectralEmbedding, Isomap, LocallyLinearEmbedding
+from sklearn.cluster import MiniBatchKMeans, DBSCAN
+
 import csv
 import spacy
 import gensim
@@ -141,18 +145,22 @@ for spec in specs:
 
 # what were the top words / topics for each direction
 top_words = {}
-global_words = []
+opinions = []
+opinionV = []
+spec_labels = []
 for spec in specs:
     # preprocess data and turn into a wordcloud
     ops = list(df[df.Dir == spec].Opinion)
     ops = [op for op in ops if op is not ""]
-
+    opinionV.extend(ops)
+    label = int(spec[1])
+    spec_labels.extend([label]*len(ops))
     txt = " ".join(ops)
     tokens = tokenizer.tokenize(txt)
     tokens = [t for t in tokens if t.lower() not in rom_sw]
     txt = " ".join(tokens)
-    global_words.append(txt.lower())
-    wc = WordCloud(width=900, height=400).generate(txt)
+    opinions.append(txt.lower())
+    wc = WordCloud(width=1280, height=1024).generate(txt)
     top_words[spec] = txt
     plt.imshow(wc)
     plt.savefig("{}top_words.png".format(spec))
@@ -160,7 +168,26 @@ for spec in specs:
 
 
 # global analysis for all directions
-global_words = " ".join(global_words)
-wc = WordCloud(width=900, height=400).generate(global_words)
+opinions = " ".join(opinions)
+wc = WordCloud(width=1280, height=1024).generate(opinions)
 plt.imshow(wc)
 plt.savefig("all_specs.png")
+
+plt.close()
+
+vect = TfidfVectorizer()
+X = vect.fit_transform(opinionV).toarray()
+
+pc = PCA(n_components=2,)
+
+X_ = pc.fit_transform(X)
+
+
+for spec in specs:
+    label = int(spec[1])
+    Xl = [x for ind, x in enumerate(X_) if spec_labels[ind] == label]
+    Xl = np.array(Xl)
+    plt.scatter(Xl[:, 0], Xl[:, 1], label=spec)
+
+plt.legend()
+plt.show()
